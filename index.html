@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tumbuh Kembang — Monitor Bayi</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F9F7F4;
+    --surface: #FFFFFF;
+    --surface2: #F3F0EC;
+    --border: #E8E4DF;
+    --text: #1A1714;
+    --text2: #7A7570;
+    --text3: #B0AAA4;
+    --teal: #1D9E75;
+    --teal-light: #E1F5EE;
+    --amber: #E8920A;
+    --amber-light: #FEF3DC;
+    --red: #D63B3B;
+    --red-light: #FDECEC;
+    --blue: #2D7DD2;
+    --blue-light: #E8F1FB;
+    --purple: #6B4EE6;
+    --purple-light: #F0EDFF;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* LAYOUT */
+  .app { display: flex; min-height: 100vh; }
+
+  .sidebar {
+    width: 260px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 24px 0;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    overflow-y: auto;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .main {
+    margin-left: 260px;
+    flex: 1;
+    padding: 32px;
+    max-width: 900px;
+  }
+
+  .logo {
+    padding: 0 20px 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+  }
+  .logo h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    color: var(--text);
+    font-weight: 400;
+  }
+  .logo p { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+  /* CHILDREN LIST */
+  .sidebar-section { padding: 0 12px; margin-bottom: 8px; }
+  .sidebar-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text3);
+    padding: 0 8px;
+    margin-bottom: 6px;
+  }
+
+  .child-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 0.15s;
+    margin-bottom: 2px;
+  }
+  .child-item:hover { background: var(--surface2); }
+  .child-item.active { background: var(--purple-light); }
+  .child-item.active .child-name { color: var(--purple); font-weight: 500; }
+
+  .avatar {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 600;
+    flex-shrink: 0;
+  }
+  .avatar-girl { background: #FBEAF0; color: #D4537E; }
+  .avatar-boy { background: var(--blue-light); color: var(--blue); }
+
+  .child-name { font-size: 14px; color: var(--text); }
+  .child-age { font-size: 11px; color: var(--text2); }
+
+  .add-child-btn {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--text2);
+    font-size: 13px;
+    transition: all 0.15s;
+    border: 1.5px dashed var(--border);
+    margin: 4px 0;
+  }
+  .add-child-btn:hover { border-color: var(--purple); color: var(--purple); background: var(--purple-light); }
+
+  /* NAV */
+  .nav-section { padding: 0 12px; margin-top: 8px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--text2);
+    font-size: 14px;
+    transition: all 0.15s;
+    margin-bottom: 2px;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: var(--surface2); color: var(--text); font-weight: 500; }
+  .nav-icon { font-size: 18px; width: 20px; text-align: center; }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 16px 20px 0;
+    border-top: 1px solid var(--border);
+  }
+  .sidebar-footer p { font-size: 11px; color: var(--text3); line-height: 1.5; }
+
+  /* MAIN CONTENT */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .page-header {
+    display: flex; align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
+  .page-title { font-family: 'DM Serif Display', serif; font-size: 26px; font-weight: 400; }
+  .page-sub { font-size: 14px; color: var(--text2); margin-top: 4px; }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 20px 24px;
+    box-shadow: var(--shadow);
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 16px;
+  }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+  /* METRIC CARDS */
+  .metric {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+  }
+  .metric-label { font-size: 12px; color: var(--text2); margin-bottom: 4px; }
+  .metric-value { font-size: 24px; font-weight: 500; color: var(--text); }
+  .metric-sub { font-size: 12px; margin-top: 2px; }
+
+  /* BADGE */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 20px;
+  }
+  .badge-green { background: var(--teal-light); color: #0A6648; }
+  .badge-amber { background: var(--amber-light); color: #7A4D00; }
+  .badge-red { background: var(--red-light); color: #8B2020; }
+  .badge-blue { background: var(--blue-light); color: #1A4F8A; }
+  .badge-purple { background: var(--purple-light); color: #3D2A99; }
+  .badge-gray { background: var(--surface2); color: var(--text2); }
+
+  /* PERCENTILE BAR */
+  .pct-bar-wrap {
+    height: 6px; background: var(--surface2);
+    border-radius: 3px; margin: 6px 0 3px; overflow: hidden;
+  }
+  .pct-bar { height: 6px; border-radius: 3px; transition: width 0.5s ease; }
+
+  /* FORM */
+  .form-group { margin-bottom: 16px; }
+  .form-label { font-size: 13px; color: var(--text2); margin-bottom: 6px; display: block; }
+  input, select, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--surface);
+    transition: border-color 0.15s;
+    outline: none;
+  }
+  input:focus, select:focus { border-color: var(--purple); }
+  input[type=number] { -moz-appearance: textfield; }
+
+  /* BUTTONS */
+  .btn {
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+  }
+  .btn-primary { background: var(--purple); color: white; }
+  .btn-primary:hover { background: #5A3FD0; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--border); }
+  .btn-danger { background: var(--red-light); color: var(--red); }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text2); }
+  .btn-outline:hover { border-color: var(--purple); color: var(--purple); }
+
+  /* MILESTONE */
+  .milestone-group { margin-bottom: 20px; }
+  .milestone-group-title {
+    font-size: 13px; font-weight: 600; color: var(--text2);
+    margin-bottom: 8px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .milestone-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .milestone-item:last-child { border-bottom: none; }
+  .check-btn {
+    width: 24px; height: 24px; border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.15s;
+    font-size: 13px;
+  }
+  .check-btn.checked { background: var(--teal); border-color: var(--teal); color: white; }
+  .milestone-text { font-size: 14px; flex: 1; }
+  .milestone-text.done { text-decoration: line-through; color: var(--text2); }
+
+  /* IMUNISASI */
+  .imun-item {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+  }
+  .imun-item:last-child { border-bottom: none; }
+  .imun-name { font-size: 14px; font-weight: 500; }
+  .imun-when { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+  /* CHART */
+  .chart-wrap { position: relative; width: 100%; }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 1000;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 28px;
+    width: 420px;
+    max-width: 90vw;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  }
+  .modal-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px; margin-bottom: 20px;
+  }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+
+  /* EMPTY STATE */
+  .empty {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--text2);
+  }
+  .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty h3 { font-size: 16px; font-weight: 500; color: var(--text); margin-bottom: 6px; }
+  .empty p { font-size: 14px; }
+
+  /* ENTRIES LOG */
+  .entry-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .entry-row:last-child { border-bottom: none; }
+
+  /* NOTIFICATION STRIP */
+  .notif-strip {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 10px;
+    font-size: 13px;
+  }
+  .notif-red { background: var(--red-light); color: #8B2020; }
+  .notif-amber { background: var(--amber-light); color: #7A4D00; }
+  .notif-green { background: var(--teal-light); color: #0A6648; }
+
+  /* PRINT */
+  @media print {
+    .sidebar, .btn, .modal-overlay, .no-print { display: none !important; }
+    .main { margin-left: 0; padding: 20px; max-width: 100%; }
+    .page { display: block !important; }
+    .card { box-shadow: none; border: 1px solid #ddd; break-inside: avoid; }
+    .chart-wrap canvas { max-width: 100%; }
+    body { background: white; }
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; padding: 16px; }
+    .grid-3 { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  hr.divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+  .info-note {
+    background: var(--blue-light);
+    border-left: 3px solid var(--blue);
+    padding: 10px 14px;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    font-size: 13px;
+    color: #1A4F8A;
+    margin-top: 16px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ADD CHILD MODAL -->
+<div class="modal-overlay" id="modal-add-child">
+  <div class="modal">
+    <h2 class="modal-title">Tambah anak</h2>
+    <div class="form-group">
+      <label class="form-label">Nama</label>
+      <input type="text" id="new-name" placeholder="Nama bayi">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tanggal lahir</label>
+      <input type="date" id="new-dob">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Jenis kelamin</label>
+      <select id="new-gender">
+        <option value="girl">Perempuan</option>
+        <option value="boy">Laki-laki</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Batal</button>
+      <button class="btn btn-primary" onclick="saveNewChild()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">
+      <h1>Tumbuh Kembang</h1>
+      <p>Monitor bayi standar WHO</p>
+    </div>
+
+    <div class="sidebar-section">
+      <p class="sidebar-label">Anak</p>
+      <div id="children-list"></div>
+      <div class="add-child-btn" onclick="openAddChild()">
+        <span style="font-size:18px">+</span>
+        <span>Tambah anak</span>
+      </div>
+    </div>
+
+    <div class="nav-section" style="margin-top: 16px;">
+      <p class="sidebar-label">Menu</p>
+      <div class="nav-item active" onclick="goPage('dashboard', this)">
+        <span class="nav-icon">📊</span> Dashboard
+      </div>
+      <div class="nav-item" onclick="goPage('pertumbuhan', this)">
+        <span class="nav-icon">📏</span> Pertumbuhan
+      </div>
+      <div class="nav-item" onclick="goPage('milestone', this)">
+        <span class="nav-icon">⭐</span> Milestone
+      </div>
+      <div class="nav-item" onclick="goPage('imunisasi', this)">
+        <span class="nav-icon">💉</span> Imunisasi
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <button class="btn btn-outline btn-sm" onclick="printReport()" style="width: 100%; margin-bottom: 8px;">🖨️ Export PDF</button>
+      <p>Data tersimpan di perangkat ini. Untuk backup, gunakan fitur export.</p>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title" id="dash-child-name">Dashboard</h2>
+          <p class="page-sub" id="dash-age">Pilih atau tambah anak untuk memulai</p>
+        </div>
+        <button class="btn btn-secondary no-print" onclick="printReport()">🖨️ Export PDF</button>
+      </div>
+
+      <div id="dash-no-child" class="empty">
+        <div class="empty-icon">👶</div>
+        <h3>Belum ada data anak</h3>
+        <p>Klik "+ Tambah anak" di sidebar untuk mulai</p>
+      </div>
+
+      <div id="dash-content" style="display:none">
+        <div id="dash-notifs" style="margin-bottom: 20px;"></div>
+
+        <div class="grid-3" style="margin-bottom: 20px;">
+          <div class="metric">
+            <p class="metric-label">Berat terakhir</p>
+            <p class="metric-value" id="dash-weight">—</p>
+            <p class="metric-sub" id="dash-weight-pct"></p>
+          </div>
+          <div class="metric">
+            <p class="metric-label">Tinggi terakhir</p>
+            <p class="metric-value" id="dash-height">—</p>
+            <p class="metric-sub" id="dash-height-pct"></p>
+          </div>
+          <div class="metric">
+            <p class="metric-label">Lingkar kepala</p>
+            <p class="metric-value" id="dash-hc">—</p>
+            <p class="metric-sub" id="dash-hc-pct"></p>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-bottom: 20px;">
+          <div class="card">
+            <p class="card-title">Grafik berat (kg)</p>
+            <div class="chart-wrap" style="height: 200px;">
+              <canvas id="chart-weight-dash" role="img" aria-label="Grafik berat badan bayi vs standar WHO"></canvas>
+            </div>
+          </div>
+          <div class="card">
+            <p class="card-title">Grafik tinggi (cm)</p>
+            <div class="chart-wrap" style="height: 200px;">
+              <canvas id="chart-height-dash" role="img" aria-label="Grafik tinggi badan bayi vs standar WHO"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <p class="card-title">Imunisasi segera</p>
+          <div id="dash-imun"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PERTUMBUHAN -->
+    <div class="page" id="page-pertumbuhan">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">Pertumbuhan</h2>
+          <p class="page-sub">Catat dan pantau berat, tinggi, lingkar kepala</p>
+        </div>
+      </div>
+
+      <div id="growth-no-child" class="empty">
+        <div class="empty-icon">📏</div>
+        <h3>Pilih anak dulu</h3>
+        <p>Pilih anak di sidebar untuk mencatat pertumbuhan</p>
+      </div>
+
+      <div id="growth-content" style="display:none">
+        <div class="grid-2" style="margin-bottom: 20px;">
+          <div class="card">
+            <p class="card-title">Catat pengukuran baru</p>
+            <div class="form-group">
+              <label class="form-label">Tanggal pengukuran</label>
+              <input type="date" id="meas-date">
+            </div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label">Berat (kg)</label>
+                <input type="number" id="meas-weight" placeholder="3.5" step="0.1" min="0" max="30">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Tinggi (cm)</label>
+                <input type="number" id="meas-height" placeholder="50" step="0.1" min="0" max="120">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Lingkar kepala (cm)</label>
+              <input type="number" id="meas-hc" placeholder="34" step="0.1" min="0" max="60">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Catatan (opsional)</label>
+              <input type="text" id="meas-note" placeholder="Misal: habis sakit, growth spurt...">
+            </div>
+            <button class="btn btn-primary" onclick="saveMeasurement()" style="width:100%">Simpan pengukuran</button>
+            <div id="save-result" style="margin-top: 12px;"></div>
+          </div>
+
+          <div class="card">
+            <p class="card-title">Hasil vs standar WHO</p>
+            <div id="who-result">
+              <p style="color: var(--text2); font-size: 14px;">Simpan pengukuran untuk melihat hasilnya.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 20px;">
+          <p class="card-title">Grafik pertumbuhan</p>
+          <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+            <button class="btn btn-sm btn-primary" id="chart-tab-w" onclick="switchChartTab('weight')">Berat</button>
+            <button class="btn btn-sm btn-secondary" id="chart-tab-h" onclick="switchChartTab('height')">Tinggi</button>
+            <button class="btn btn-sm btn-secondary" id="chart-tab-hc" onclick="switchChartTab('hc')">Lingkar kepala</button>
+          </div>
+          <div class="chart-wrap" style="height: 280px;">
+            <canvas id="chart-growth" role="img" aria-label="Grafik pertumbuhan bayi vs kurva WHO"></canvas>
+          </div>
+          <div style="display: flex; gap: 16px; margin-top: 12px; font-size: 12px; color: var(--text2);">
+            <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 12px; height: 3px; background: var(--purple); border-radius: 2px; display: inline-block;"></span> Data anak</span>
+            <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 12px; height: 3px; background: #D0C8F0; border-radius: 2px; display: inline-block;"></span> P3-P97 WHO</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <p class="card-title">Riwayat pengukuran</p>
+          <div id="entries-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MILESTONE -->
+    <div class="page" id="page-milestone">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">Milestone perkembangan</h2>
+          <p class="page-sub">Berdasarkan panduan WHO & CDC</p>
+        </div>
+      </div>
+
+      <div id="milestone-no-child" class="empty">
+        <div class="empty-icon">⭐</div>
+        <h3>Pilih anak dulu</h3>
+      </div>
+
+      <div id="milestone-content" style="display:none">
+        <div id="milestone-progress" class="card" style="margin-bottom: 20px;"></div>
+        <div class="card">
+          <div id="milestone-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- IMUNISASI -->
+    <div class="page" id="page-imunisasi">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">Jadwal imunisasi</h2>
+          <p class="page-sub">Rekomendasi IDAI 2023</p>
+        </div>
+      </div>
+
+      <div id="imun-no-child" class="empty">
+        <div class="empty-icon">💉</div>
+        <h3>Pilih anak dulu</h3>
+      </div>
+
+      <div id="imun-content" style="display:none">
+        <div id="imun-notif" style="margin-bottom: 16px;"></div>
+        <div class="card">
+          <div id="imun-list"></div>
+        </div>
+        <p class="info-note">⚠️ Jadwal ini berdasarkan rekomendasi IDAI 2023. Selalu konfirmasi dan konsultasikan dengan dokter anak Anda.</p>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ==================== DATA ====================
+const WHO_W_GIRL = [
+  {m:0,p3:2.4,p15:2.8,p50:3.2,p85:3.7,p97:4.2},
+  {m:1,p3:3.2,p15:3.6,p50:4.2,p85:4.8,p97:5.5},
+  {m:2,p3:3.9,p15:4.5,p50:5.1,p85:5.8,p97:6.6},
+  {m:3,p3:4.5,p15:5.2,p50:5.8,p85:6.6,p97:7.5},
+  {m:4,p3:4.9,p15:5.7,p50:6.4,p85:7.3,p97:8.2},
+  {m:5,p3:5.3,p15:6.1,p50:6.9,p85:7.8,p97:8.8},
+  {m:6,p3:5.6,p15:6.5,p50:7.3,p85:8.2,p97:9.3},
+  {m:9,p3:6.3,p15:7.2,p50:8.2,p85:9.3,p97:10.4},
+  {m:12,p3:6.9,p15:7.8,p50:8.9,p85:10.1,p97:11.3},
+  {m:18,p3:7.8,p15:8.8,p50:10.2,p85:11.5,p97:12.9},
+  {m:24,p3:8.7,p15:9.8,p50:11.5,p85:13.0,p97:14.5}
+];
+const WHO_W_BOY = [
+  {m:0,p3:2.5,p15:2.9,p50:3.3,p85:3.9,p97:4.4},
+  {m:1,p3:3.4,p15:3.9,p50:4.5,p85:5.1,p97:5.8},
+  {m:2,p3:4.3,p15:4.9,p50:5.6,p85:6.3,p97:7.1},
+  {m:3,p3:5.0,p15:5.7,p50:6.4,p85:7.2,p97:8.0},
+  {m:4,p3:5.6,p15:6.2,p50:7.0,p85:7.8,p97:8.7},
+  {m:5,p3:6.0,p15:6.7,p50:7.5,p85:8.4,p97:9.3},
+  {m:6,p3:6.4,p15:7.1,p50:7.9,p85:8.8,p97:9.8},
+  {m:9,p3:7.1,p15:7.9,p50:8.9,p85:9.9,p97:11.0},
+  {m:12,p3:7.8,p15:8.7,p50:9.6,p85:10.8,p97:12.0},
+  {m:18,p3:8.8,p15:9.8,p50:10.9,p85:12.2,p97:13.7},
+  {m:24,p3:9.7,p15:10.8,p50:12.0,p85:13.6,p97:15.3}
+];
+const WHO_H_GIRL = [
+  {m:0,p3:45.6,p50:49.1,p97:52.9},{m:1,p3:49.8,p50:53.7,p97:57.6},
+  {m:2,p3:52.8,p50:57.1,p97:61.1},{m:3,p3:55.3,p50:59.8,p97:63.9},
+  {m:4,p3:57.3,p50:62.1,p97:66.2},{m:5,p3:58.9,p50:63.8,p97:68.0},
+  {m:6,p3:60.6,p50:65.7,p97:70.2},{m:9,p3:64.3,p50:70.1,p97:75.0},
+  {m:12,p3:68.9,p50:74.0,p97:79.2},{m:18,p3:74.0,p50:80.7,p97:87.0},
+  {m:24,p3:80.0,p50:87.0,p97:94.0}
+];
+const WHO_H_BOY = [
+  {m:0,p3:46.1,p50:49.9,p97:53.7},{m:1,p3:50.8,p50:54.7,p97:58.6},
+  {m:2,p3:54.0,p50:58.4,p97:62.4},{m:3,p3:56.4,p50:61.4,p97:65.5},
+  {m:4,p3:58.4,p50:63.9,p97:68.0},{m:5,p3:60.0,p50:65.9,p97:70.5},
+  {m:6,p3:61.2,p50:67.6,p97:72.8},{m:9,p3:65.2,p50:72.0,p97:77.4},
+  {m:12,p3:71.0,p50:75.7,p97:82.0},{m:18,p3:76.0,p50:82.3,p97:88.7},
+  {m:24,p3:81.7,p50:87.8,p97:95.1}
+];
+const WHO_HC_GIRL = [
+  {m:0,p3:31.7,p50:33.9,p97:36.1},{m:1,p3:33.9,p50:36.5,p97:38.3},
+  {m:2,p3:35.5,p50:38.3,p97:40.0},{m:3,p3:36.7,p50:39.5,p97:41.3},
+  {m:4,p3:37.7,p50:40.6,p97:42.5},{m:6,p3:39.3,p50:42.2,p97:44.2},
+  {m:9,p3:41.3,p50:44.4,p97:46.3},{m:12,p3:42.6,p50:45.8,p97:47.8},
+  {m:18,p3:44.1,p50:47.2,p97:49.3},{m:24,p3:45.2,p50:48.3,p97:50.5}
+];
+const WHO_HC_BOY = [
+  {m:0,p3:32.1,p50:34.5,p97:37.0},{m:1,p3:34.9,p50:37.3,p97:39.7},
+  {m:2,p3:36.4,p50:39.1,p97:41.5},{m:3,p3:37.7,p50:40.5,p97:42.9},
+  {m:4,p3:38.7,p50:41.6,p97:44.0},{m:6,p3:40.5,p50:43.3,p97:45.8},
+  {m:9,p3:42.3,p50:45.5,p97:48.0},{m:12,p3:43.5,p50:46.8,p97:49.5},
+  {m:18,p3:45.3,p50:48.4,p97:51.0},{m:24,p3:46.4,p50:49.5,p97:52.2}
+];
+
+const MILESTONES = [
+  {age:0, label:'Newborn (0 bulan)', items:[
+    'Merespons suara keras dengan kaget/menangis',
+    'Fokus ke wajah jarak 20-30 cm',
+    'Gerak refleks menggenggam (palmar grasp)',
+    'Menangis sebagai komunikasi utama'
+  ]},
+  {age:1, label:'1 bulan', items:[
+    'Mengangkat kepala sebentar saat tengkurap',
+    'Menatap wajah orang tua',
+    'Mengeluarkan suara selain tangis (cooing)',
+    'Merespons suara familiar'
+  ]},
+  {age:2, label:'2 bulan', items:[
+    'Senyum sosial (balas senyum orang lain)',
+    'Mengikuti benda bergerak dengan mata',
+    'Mengangkat kepala 45° saat tengkurap',
+    'Mengoceh (vocalizing) lebih aktif'
+  ]},
+  {age:3, label:'3 bulan', items:[
+    'Kontrol kepala lebih stabil',
+    'Tertawa dan mengoceh',
+    'Mulai meraih benda di depannya',
+    'Mengenal wajah orang tua / pengasuh'
+  ]},
+  {age:4, label:'4 bulan', items:[
+    'Mengangkat dada saat tengkurap (push-up)',
+    'Memegang mainan dengan dua tangan',
+    'Berguling (perut ke punggung)',
+    'Tertawa keras',
+    'Merespons nama sendiri'
+  ]},
+  {age:6, label:'6 bulan', items:[
+    'Duduk dengan bantuan / tripod sitting',
+    'Siap mulai MPASI',
+    'Berguling dua arah',
+    'Babbling (ba-ba, ma-ma, da-da)',
+    'Meraih dan memindahkan benda antar tangan'
+  ]},
+  {age:9, label:'9 bulan', items:[
+    'Duduk mandiri tanpa bantuan',
+    'Merangkak (crawling)',
+    'Genggaman pincer (jempol + telunjuk)',
+    'Takut orang asing (stranger anxiety)',
+    'Memahami kata "tidak"'
+  ]},
+  {age:12, label:'12 bulan', items:[
+    'Berdiri dengan pegangan',
+    'Langkah pertama (beberapa anak)',
+    '1-3 kata bermakna (mama, papa, minta)',
+    'Memahami perintah sederhana',
+    'Minum dari gelas'
+  ]},
+  {age:18, label:'18 bulan', items:[
+    'Berjalan mandiri',
+    'Kosakata 5-20 kata',
+    'Menunjuk benda yang diinginkan',
+    'Makan sendiri dengan tangan',
+    'Bermain pura-pura sederhana'
+  ]},
+  {age:24, label:'24 bulan', items:[
+    'Berlari',
+    'Kalimat 2 kata ("mau minum")',
+    'Bermain pura-pura lebih kompleks',
+    'Naik tangga dengan bantuan',
+    'Kosakata 50+ kata'
+  ]}
+];
+
+const IMUNISASI_TEMPLATE = [
+  {vaccine:'Hepatitis B (dosis 1)',when:'Lahir (0-24 jam)',ageMonth:0},
+  {vaccine:'Polio tetes (OPV-0)',when:'Lahir (0-1 bulan)',ageMonth:0},
+  {vaccine:'BCG',when:'1 bulan',ageMonth:1},
+  {vaccine:'DPT-HB-Hib (dosis 1)',when:'2 bulan',ageMonth:2},
+  {vaccine:'Polio tetes (OPV-1)',when:'2 bulan',ageMonth:2},
+  {vaccine:'DPT-HB-Hib (dosis 2)',when:'3 bulan',ageMonth:3},
+  {vaccine:'Polio tetes (OPV-2)',when:'3 bulan',ageMonth:3},
+  {vaccine:'DPT-HB-Hib (dosis 3)',when:'4 bulan',ageMonth:4},
+  {vaccine:'Polio tetes (OPV-3)',when:'4 bulan',ageMonth:4},
+  {vaccine:'IPV (Polio suntik)',when:'4 bulan',ageMonth:4},
+  {vaccine:'Campak-Rubela / MR',when:'9 bulan',ageMonth:9},
+  {vaccine:'DPT-HB-Hib (booster 1)',when:'18 bulan',ageMonth:18},
+  {vaccine:'Campak-Rubela (booster)',when:'18 bulan',ageMonth:18},
+  {vaccine:'Polio tetes (OPV-4)',when:'18 bulan',ageMonth:18},
+];
+
+// ==================== STATE ====================
+let state = { children: [], activeId: null };
+let growthChartInstance = null;
+let dashChartW = null;
+let dashChartH = null;
+let activeChartTab = 'weight';
+
+// ==================== STORAGE ====================
+function loadState() {
+  try {
+    const d = localStorage.getItem('tumbuh-kembang');
+    if (d) state = JSON.parse(d);
+  } catch(e) {}
+}
+function saveState() {
+  localStorage.setItem('tumbuh-kembang', JSON.stringify(state));
+}
+
+// ==================== HELPERS ====================
+function getAgeMonths(dob) {
+  if (!dob) return 0;
+  const d = new Date(dob), now = new Date();
+  return Math.max(0, Math.floor((now - d) / (1000*60*60*24*30.44)));
+}
+function getAgeDays(dob) {
+  if (!dob) return 0;
+  return Math.max(0, Math.floor((new Date() - new Date(dob)) / (1000*60*60*24)));
+}
+function ageLabel(dob) {
+  const d = getAgeDays(dob);
+  const m = getAgeMonths(dob);
+  if (d < 30) return d + ' hari';
+  const rem = d - Math.floor(m * 30.44);
+  return m + ' bulan' + (rem > 0 ? ' ' + rem + ' hari' : '');
+}
+function getWHORef(table, ageMonths) {
+  let best = table[0], diff = 999;
+  for (const r of table) {
+    const d = Math.abs(r.m - ageMonths);
+    if (d < diff) { diff = d; best = r; }
+  }
+  return best;
+}
+function calcPct(val, ref) {
+  let pct, color, label;
+  if (!ref.p15) {
+    // simple 3/50/97
+    if (val < ref.p3) { pct = 2; color = '#D63B3B'; label = 'Di bawah P3 ⚠️'; }
+    else if (val <= ref.p50) { pct = Math.round(3 + (val-ref.p3)/(ref.p50-ref.p3)*47); color = '#1D9E75'; label = 'Normal'; }
+    else if (val <= ref.p97) { pct = Math.round(50 + (val-ref.p50)/(ref.p97-ref.p50)*47); color = '#1D9E75'; label = 'Normal'; }
+    else { pct = 98; color = '#2D7DD2'; label = 'Di atas P97'; }
+  } else {
+    if (val < ref.p3) { pct = 2; color = '#D63B3B'; label = 'Di bawah P3 ⚠️'; }
+    else if (val < ref.p15) { pct = Math.round(3+(val-ref.p3)/(ref.p15-ref.p3)*12); color = '#E8920A'; label = 'Bawah normal'; }
+    else if (val <= ref.p85) { pct = Math.round(15+(val-ref.p15)/(ref.p85-ref.p15)*70); color = '#1D9E75'; label = 'Normal'; }
+    else if (val <= ref.p97) { pct = Math.round(85+(val-ref.p85)/(ref.p97-ref.p85)*12); color = '#2D7DD2'; label = 'Atas rata-rata'; }
+    else { pct = 98; color = '#E8920A'; label = 'Di atas P97'; }
+  }
+  return { pct: Math.min(pct, 99), color, label };
+}
+function initials(name) {
+  return (name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+}
+function getChild() {
+  return state.children.find(c => c.id === state.activeId);
+}
+function fmt(n, dec=1) { return n != null ? parseFloat(n).toFixed(dec) : '—'; }
+
+// ==================== MODAL ====================
+function openAddChild() {
+  document.getElementById('modal-add-child').classList.add('open');
+  document.getElementById('new-dob').valueAsDate = new Date();
+}
+function closeModal() {
+  document.getElementById('modal-add-child').classList.remove('open');
+}
+function saveNewChild() {
+  const name = document.getElementById('new-name').value.trim();
+  const dob = document.getElementById('new-dob').value;
+  const gender = document.getElementById('new-gender').value;
+  if (!name) { alert('Masukkan nama anak'); return; }
+  if (!dob) { alert('Masukkan tanggal lahir'); return; }
+  const child = {
+    id: Date.now().toString(),
+    name, dob, gender,
+    measurements: [],
+    milestones: {},
+    imunisasi: IMUNISASI_TEMPLATE.map(i => ({...i, done: false}))
+  };
+  state.children.push(child);
+  state.activeId = child.id;
+  saveState();
+  closeModal();
+  renderSidebar();
+  renderAll();
+}
+
+// ==================== SIDEBAR ====================
+function renderSidebar() {
+  const list = document.getElementById('children-list');
+  list.innerHTML = '';
+  state.children.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'child-item' + (c.id === state.activeId ? ' active' : '');
+    div.innerHTML = `
+      <div class="avatar ${c.gender === 'girl' ? 'avatar-girl' : 'avatar-boy'}">${initials(c.name)}</div>
+      <div><p class="child-name">${c.name}</p><p class="child-age">${ageLabel(c.dob)}</p></div>
+    `;
+    div.onclick = () => { state.activeId = c.id; saveState(); renderSidebar(); renderAll(); };
+    list.appendChild(div);
+  });
+}
+
+// ==================== PAGE NAV ====================
+function goPage(page, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  el.classList.add('active');
+  if (page === 'pertumbuhan') renderGrowthPage();
+  if (page === 'milestone') renderMilestonePage();
+  if (page === 'imunisasi') renderImunPage();
+  if (page === 'dashboard') renderDashboard();
+}
+
+// ==================== RENDER ALL ====================
+function renderAll() {
+  renderDashboard();
+  renderGrowthPage();
+  renderMilestonePage();
+  renderImunPage();
+}
+
+// ==================== DASHBOARD ====================
+function renderDashboard() {
+  const c = getChild();
+  if (!c) {
+    document.getElementById('dash-no-child').style.display = 'block';
+    document.getElementById('dash-content').style.display = 'none';
+    return;
+  }
+  document.getElementById('dash-no-child').style.display = 'none';
+  document.getElementById('dash-content').style.display = 'block';
+  document.getElementById('dash-child-name').textContent = c.name;
+  document.getElementById('dash-age').textContent = 'Usia: ' + ageLabel(c.dob);
+
+  const m = c.measurements;
+  const last = m.length ? m[m.length-1] : null;
+  const ageM = getAgeMonths(c.dob);
+  const isGirl = c.gender === 'girl';
+
+  if (last) {
+    if (last.weight) {
+      const r = calcPct(last.weight, getWHORef(isGirl ? WHO_W_GIRL : WHO_W_BOY, ageM));
+      document.getElementById('dash-weight').textContent = fmt(last.weight) + ' kg';
+      document.getElementById('dash-weight-pct').innerHTML = `<span style="color:${r.color}">${r.label} · P${r.pct}</span>`;
+    }
+    if (last.height) {
+      const r = calcPct(last.height, getWHORef(isGirl ? WHO_H_GIRL : WHO_H_BOY, ageM));
+      document.getElementById('dash-height').textContent = fmt(last.height) + ' cm';
+      document.getElementById('dash-height-pct').innerHTML = `<span style="color:${r.color}">${r.label} · P${r.pct}</span>`;
+    }
+    if (last.hc) {
+      const r = calcPct(last.hc, getWHORef(isGirl ? WHO_HC_GIRL : WHO_HC_BOY, ageM));
+      document.getElementById('dash-hc').textContent = fmt(last.hc) + ' cm';
+      document.getElementById('dash-hc-pct').innerHTML = `<span style="color:${r.color}">${r.label} · P${r.pct}</span>`;
+    }
+  } else {
+    ['dash-weight','dash-height','dash-hc'].forEach(id => document.getElementById(id).textContent = '—');
+    ['dash-weight-pct','dash-height-pct','dash-hc-pct'].forEach(id => document.getElementById(id).textContent = 'Belum ada data');
+  }
+
+  // Notifications
+  const notifEl = document.getElementById('dash-notifs');
+  notifEl.innerHTML = '';
+  const overdue = c.imunisasi.filter(i => !i.done && getAgeMonths(c.dob) > i.ageMonth + 1);
+  const due = c.imunisasi.filter(i => !i.done && getAgeMonths(c.dob) === i.ageMonth);
+  if (overdue.length) {
+    notifEl.innerHTML += `<div class="notif-strip notif-red">⚠️ ${overdue.length} imunisasi terlambat: ${overdue.slice(0,2).map(i=>i.vaccine).join(', ')}${overdue.length>2?' ...':''}</div>`;
+  }
+  if (due.length) {
+    notifEl.innerHTML += `<div class="notif-strip notif-amber">💉 Imunisasi bulan ini: ${due.map(i=>i.vaccine).join(', ')}</div>`;
+  }
+  if (!overdue.length && !due.length && c.imunisasi.some(i => !i.done)) {
+    notifEl.innerHTML += `<div class="notif-strip notif-green">✅ Imunisasi dalam jadwal</div>`;
+  }
+
+  // Dash imunisasi
+  const dashImun = document.getElementById('dash-imun');
+  const urgent = c.imunisasi.filter(i => !i.done && getAgeMonths(c.dob) >= i.ageMonth - 1).slice(0,4);
+  if (urgent.length) {
+    dashImun.innerHTML = urgent.map(i => {
+      const overdue = getAgeMonths(c.dob) > i.ageMonth + 1;
+      const due = getAgeMonths(c.dob) === i.ageMonth;
+      return `<div class="imun-item">
+        <div><p class="imun-name">${i.vaccine}</p><p class="imun-when">${i.when}</p></div>
+        <span class="badge ${overdue ? 'badge-red' : due ? 'badge-blue' : 'badge-amber'}">${overdue ? 'Terlambat' : due ? 'Sekarang' : 'Segera'}</span>
+      </div>`;
+    }).join('');
+  } else {
+    dashImun.innerHTML = '<p style="color:var(--text2);font-size:14px;">Semua imunisasi dalam jadwal 👍</p>';
+  }
+
+  // Mini charts
+  buildMiniChart('chart-weight-dash', dashChartW, c, 'weight', isGirl ? WHO_W_GIRL : WHO_W_BOY, 'kg');
+  buildMiniChart('chart-height-dash', dashChartH, c, 'height', isGirl ? WHO_H_GIRL : WHO_H_BOY, 'cm');
+}
+
+function buildMiniChart(id, instance, child, field, whoTable, unit) {
+  if (instance) instance.destroy();
+  const canvas = document.getElementById(id);
+  if (!canvas) return;
+  const labels = whoTable.map(r => r.m + 'bl');
+  const p3 = whoTable.map(r => r.p3);
+  const p97 = whoTable.map(r => r.p97);
+  const childPoints = child.measurements
+    .filter(m => m[field])
+    .map(m => ({ x: getAgeMonths(child.dob) - getAgeMonths(m.date ? m.date : child.dob), y: m[field], label: m.date }));
+  const childData = whoTable.map(r => {
+    const approx = child.measurements.find(m => Math.abs(getAgeMonths(m.date) - r.m) <= 1 && m[field]);
+    return approx ? approx[field] : null;
+  });
+
+  const inst = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'P97', data: p97, borderColor: '#D0C8F0', borderWidth: 1, pointRadius: 0, fill: false, tension: 0.4, borderDash: [4,3] },
+        { label: 'P3', data: p3, borderColor: '#D0C8F0', borderWidth: 1, pointRadius: 0, fill: '-1', backgroundColor: 'rgba(107,78,230,0.06)', tension: 0.4, borderDash: [4,3] },
+        { label: child.name, data: childData, borderColor: '#6B4EE6', borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#6B4EE6', fill: false, tension: 0.3, spanGaps: true }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { font: { size: 10 }, color: '#7A7570' }, grid: { display: false } },
+        y: { ticks: { font: { size: 10 }, color: '#7A7570', callback: v => v + unit }, grid: { color: '#F3F0EC' } }
+      }
+    }
+  });
+  if (id.includes('weight')) dashChartW = inst;
+  else dashChartH = inst;
+}
+
+// ==================== GROWTH PAGE ====================
+function renderGrowthPage() {
+  const c = getChild();
+  const noChild = document.getElementById('growth-no-child');
+  const content = document.getElementById('growth-content');
+  if (!c) { noChild.style.display = 'flex'; content.style.display = 'none'; return; }
+  noChild.style.display = 'none'; content.style.display = 'block';
+  document.getElementById('meas-date').valueAsDate = new Date();
+  renderEntriesList(c);
+  renderGrowthChart(c);
+}
+
+function saveMeasurement() {
+  const c = getChild();
+  if (!c) return;
+  const date = document.getElementById('meas-date').value;
+  const weight = parseFloat(document.getElementById('meas-weight').value) || null;
+  const height = parseFloat(document.getElementById('meas-height').value) || null;
+  const hc = parseFloat(document.getElementById('meas-hc').value) || null;
+  const note = document.getElementById('meas-note').value;
+  if (!weight && !height && !hc) { alert('Masukkan minimal satu pengukuran'); return; }
+  c.measurements.push({ id: Date.now(), date, weight, height, hc, note });
+  c.measurements.sort((a,b) => new Date(a.date) - new Date(b.date));
+  saveState();
+  document.getElementById('meas-weight').value = '';
+  document.getElementById('meas-height').value = '';
+  document.getElementById('meas-hc').value = '';
+  document.getElementById('meas-note').value = '';
+  showWHOResult(c, {weight, height, hc});
+  renderEntriesList(c);
+  renderGrowthChart(c);
+  renderDashboard();
+}
+
+function showWHOResult(c, {weight, height, hc}) {
+  const ageM = getAgeMonths(c.dob);
+  const isGirl = c.gender === 'girl';
+  let html = '';
+  if (weight) {
+    const ref = getWHORef(isGirl ? WHO_W_GIRL : WHO_W_BOY, ageM);
+    const r = calcPct(weight, ref);
+    html += whoMetricHtml('Berat badan', `${fmt(weight)} kg`, r, ref, 'kg');
+  }
+  if (height) {
+    const ref = getWHORef(isGirl ? WHO_H_GIRL : WHO_H_BOY, ageM);
+    const r = calcPct(height, ref);
+    html += whoMetricHtml('Tinggi badan', `${fmt(height)} cm`, r, ref, 'cm');
+  }
+  if (hc) {
+    const ref = getWHORef(isGirl ? WHO_HC_GIRL : WHO_HC_BOY, ageM);
+    const r = calcPct(hc, ref);
+    html += whoMetricHtml('Lingkar kepala', `${fmt(hc)} cm`, r, ref, 'cm');
+  }
+  html += `<p class="info-note" style="margin-top:12px">Usia referensi: ${ageM} bulan. Nilai P3-P97 berdasarkan tabel WHO.</p>`;
+  document.getElementById('who-result').innerHTML = html;
+}
+
+function whoMetricHtml(label, val, r, ref, unit) {
+  return `<div style="margin-bottom: 14px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+      <span style="font-size: 13px; color: var(--text2);">${label}</span>
+      <span style="font-size: 16px; font-weight: 500;">${val}</span>
+    </div>
+    <div class="pct-bar-wrap"><div class="pct-bar" style="width:${r.pct}%; background:${r.color}"></div></div>
+    <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text3);">
+      <span>P3: ${ref.p3}${unit}</span>
+      <span style="color:${r.color}; font-weight:500">${r.label} · Persentil ~${r.pct}</span>
+      <span>P97: ${ref.p97}${unit}</span>
+    </div>
+  </div>`;
+}
+
+function renderEntriesList(c) {
+  const el = document.getElementById('entries-list');
+  if (!c.measurements.length) {
+    el.innerHTML = '<p style="color:var(--text2);font-size:14px;padding:12px 0">Belum ada data pengukuran.</p>';
+    return;
+  }
+  const rows = [...c.measurements].reverse().map(m => `
+    <div class="entry-row">
+      <div>
+        <span style="font-weight:500">${new Date(m.date).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})}</span>
+        ${m.note ? `<span style="color:var(--text2)"> · ${m.note}</span>` : ''}
+      </div>
+      <div style="display:flex; gap:12px; align-items:center">
+        ${m.weight ? `<span>${fmt(m.weight)} kg</span>` : ''}
+        ${m.height ? `<span>${fmt(m.height)} cm</span>` : ''}
+        ${m.hc ? `<span>HC ${fmt(m.hc)} cm</span>` : ''}
+        <button class="btn btn-sm btn-danger" onclick="deleteMeasurement('${m.id}')">Hapus</button>
+      </div>
+    </div>`).join('');
+  el.innerHTML = rows;
+}
+
+function deleteMeasurement(id) {
+  const c = getChild();
+  if (!c || !confirm('Hapus data ini?')) return;
+  c.measurements = c.measurements.filter(m => m.id != id);
+  saveState();
+  renderEntriesList(c);
+  renderGrowthChart(c);
+  renderDashboard();
+}
+
+function switchChartTab(tab) {
+  activeChartTab = tab;
+  ['w','h','hc'].forEach(t => {
+    const btn = document.getElementById('chart-tab-' + t);
+    btn.className = 'btn btn-sm ' + (t === tab.replace('weight','w').replace('height','h') ? 'btn-primary' : 'btn-secondary');
+  });
+  renderGrowthChart(getChild());
+}
+
+function renderGrowthChart(c) {
+  if (growthChartInstance) { growthChartInstance.destroy(); growthChartInstance = null; }
+  const canvas = document.getElementById('chart-growth');
+  if (!canvas || !c) return;
+  const isGirl = c.gender === 'girl';
+  let whoTable, field, unit;
+  if (activeChartTab === 'weight') { whoTable = isGirl ? WHO_W_GIRL : WHO_W_BOY; field = 'weight'; unit = 'kg'; }
+  else if (activeChartTab === 'height') { whoTable = isGirl ? WHO_H_GIRL : WHO_H_BOY; field = 'height'; unit = 'cm'; }
+  else { whoTable = isGirl ? WHO_HC_GIRL : WHO_HC_BOY; field = 'hc'; unit = 'cm'; }
+
+  const labels = whoTable.map(r => r.m + ' bl');
+  const p3 = whoTable.map(r => r.p3);
+  const p97 = whoTable.map(r => r.p97);
+  const p50 = whoTable.map(r => r.p50 || (r.p3 + r.p97) / 2);
+
+  const childData = whoTable.map(r => {
+    const match = c.measurements.find(m => m[field] && Math.abs(getAgeMonths(m.date) - r.m) <= 1);
+    return match ? match[field] : null;
+  });
+
+  growthChartInstance = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'P97', data: p97, borderColor: '#E0D8FF', borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.4, borderDash: [5,4] },
+        { label: 'P50', data: p50, borderColor: '#C5B8F5', borderWidth: 1, pointRadius: 0, fill: false, tension: 0.4, borderDash: [3,3] },
+        { label: 'P3', data: p3, borderColor: '#E0D8FF', borderWidth: 1.5, pointRadius: 0, fill: '-2', backgroundColor: 'rgba(107,78,230,0.07)', tension: 0.4, borderDash: [5,4] },
+        { label: c.name, data: childData, borderColor: '#6B4EE6', borderWidth: 2.5, pointRadius: 5, pointBackgroundColor: '#6B4EE6', pointBorderColor: '#fff', pointBorderWidth: 2, fill: false, tension: 0.3, spanGaps: true }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y + ' ' + unit } }
+      },
+      scales: {
+        x: { ticks: { font: { size: 11 }, color: '#7A7570' }, grid: { color: '#F3F0EC' } },
+        y: { ticks: { font: { size: 11 }, color: '#7A7570', callback: v => v + unit }, grid: { color: '#F3F0EC' } }
+      }
+    }
+  });
+}
+
+// ==================== MILESTONE ====================
+function renderMilestonePage() {
+  const c = getChild();
+  const noChild = document.getElementById('milestone-no-child');
+  const content = document.getElementById('milestone-content');
+  if (!c) { noChild.style.display = 'flex'; content.style.display = 'none'; return; }
+  noChild.style.display = 'none'; content.style.display = 'block';
+
+  const ageM = getAgeMonths(c.dob);
+  const relevant = MILESTONES.filter(g => g.age <= ageM + 2);
+  const total = relevant.reduce((s, g) => s + g.items.length, 0);
+  const done = relevant.reduce((s, g) => s + g.items.filter((_, i) => c.milestones[g.age + '-' + i]).length, 0);
+  const pct = total ? Math.round(done / total * 100) : 0;
+
+  document.getElementById('milestone-progress').innerHTML = `
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+      <span style="font-weight: 500;">Progress milestone</span>
+      <span style="font-size: 18px; font-weight: 600; color: var(--purple)">${done}/${total}</span>
+    </div>
+    <div class="pct-bar-wrap" style="height: 8px; border-radius: 4px;">
+      <div class="pct-bar" style="width: ${pct}%; background: var(--purple); height: 8px; border-radius: 4px;"></div>
+    </div>
+    <p style="font-size: 12px; color: var(--text2); margin-top: 6px;">${pct}% tercapai untuk usia saat ini</p>`;
+
+  const list = document.getElementById('milestone-list');
+  list.innerHTML = [...relevant].reverse().map(g => {
+    const isCurrent = g.age === Math.floor(ageM / 3) * 3 || ageM >= g.age;
+    return `<div class="milestone-group">
+      <div class="milestone-group-title">
+        ${g.label}
+        <span class="badge ${ageM >= g.age ? 'badge-purple' : 'badge-gray'}">${ageM >= g.age ? 'Sudah waktunya' : 'Akan datang'}</span>
+      </div>
+      ${g.items.map((item, i) => {
+        const key = g.age + '-' + i;
+        const checked = c.milestones[key] || false;
+        return `<div class="milestone-item">
+          <button class="check-btn ${checked ? 'checked' : ''}" onclick="toggleMilestone('${key}')">
+            ${checked ? '✓' : ''}
+          </button>
+          <span class="milestone-text ${checked ? 'done' : ''}">${item}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+}
+
+function toggleMilestone(key) {
+  const c = getChild();
+  if (!c) return;
+  c.milestones[key] = !c.milestones[key];
+  saveState();
+  renderMilestonePage();
+}
+
+// ==================== IMUNISASI ====================
+function renderImunPage() {
+  const c = getChild();
+  const noChild = document.getElementById('imun-no-child');
+  const content = document.getElementById('imun-content');
+  if (!c) { noChild.style.display = 'flex'; content.style.display = 'none'; return; }
+  noChild.style.display = 'none'; content.style.display = 'block';
+
+  const ageM = getAgeMonths(c.dob);
+  const overdue = c.imunisasi.filter(i => !i.done && ageM > i.ageMonth + 1);
+  const due = c.imunisasi.filter(i => !i.done && ageM === i.ageMonth);
+
+  const notif = document.getElementById('imun-notif');
+  notif.innerHTML = '';
+  if (overdue.length) notif.innerHTML += `<div class="notif-strip notif-red">⚠️ ${overdue.length} imunisasi terlambat</div>`;
+  if (due.length) notif.innerHTML += `<div class="notif-strip notif-amber">💉 ${due.length} imunisasi jadwal bulan ini</div>`;
+
+  const list = document.getElementById('imun-list');
+  list.innerHTML = c.imunisasi.map((imun, idx) => {
+    const overdue = !imun.done && ageM > imun.ageMonth + 1;
+    const due = !imun.done && ageM === imun.ageMonth;
+    const upcoming = !imun.done && ageM < imun.ageMonth;
+    let badgeClass = 'badge-gray', badgeText = 'Belum';
+    if (imun.done) { badgeClass = 'badge-green'; badgeText = 'Sudah ✓'; }
+    else if (overdue) { badgeClass = 'badge-red'; badgeText = 'Terlambat'; }
+    else if (due) { badgeClass = 'badge-blue'; badgeText = 'Bulan ini'; }
+    return `<div class="imun-item">
+      <div style="flex:1">
+        <p class="imun-name" style="${imun.done ? 'text-decoration:line-through;color:var(--text2)' : ''}">${imun.vaccine}</p>
+        <p class="imun-when">${imun.when}</p>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px">
+        <span class="badge ${badgeClass}">${badgeText}</span>
+        <button class="btn btn-sm btn-outline" onclick="toggleImun(${idx})">${imun.done ? 'Batal' : 'Tandai sudah'}</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleImun(idx) {
+  const c = getChild();
+  if (!c) return;
+  c.imunisasi[idx].done = !c.imunisasi[idx].done;
+  saveState();
+  renderImunPage();
+  renderDashboard();
+}
+
+// ==================== PRINT ====================
+function printReport() {
+  window.print();
+}
+
+// ==================== INIT ====================
+loadState();
+renderSidebar();
+if (state.children.length) {
+  if (!state.activeId) state.activeId = state.children[0].id;
+  renderAll();
+}
+</script>
+</body>
+</html>

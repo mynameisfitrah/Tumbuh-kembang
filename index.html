@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tumbuh Kembang — Monitor Bayi</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -349,6 +350,65 @@
   .notif-amber { background: var(--amber-light); color: #7A4D00; }
   .notif-green { background: var(--teal-light); color: #0A6648; }
 
+  /* LOGIN */
+  .login-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+  }
+  .login-box {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 40px;
+    width: 380px;
+    max-width: 90vw;
+    box-shadow: var(--shadow);
+    text-align: center;
+  }
+  .login-logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px;
+    font-weight: 400;
+    margin-bottom: 6px;
+  }
+  .login-sub { font-size: 14px; color: var(--text2); margin-bottom: 32px; }
+  .sync-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--teal-light); color: #0A6648;
+    font-size: 12px; font-weight: 600;
+    padding: 4px 10px; border-radius: 20px;
+    margin-bottom: 28px;
+  }
+  .family-code-display {
+    background: var(--purple-light);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--purple);
+    margin: 12px 0;
+    font-family: monospace;
+  }
+  .loading-overlay {
+    position: fixed; inset: 0;
+    background: rgba(249,247,244,0.85);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999;
+    flex-direction: column; gap: 12px;
+  }
+  .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--purple);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
   /* PRINT */
   @media print {
     .sidebar, .btn, .modal-overlay, .no-print { display: none !important; }
@@ -412,7 +472,42 @@
   </div>
 </div>
 
-<div class="app">
+<!-- LOADING -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="spinner"></div>
+  <p style="font-size: 14px; color: var(--text2);" id="loading-text">Menghubungkan ke Supabase...</p>
+</div>
+
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="login-screen" style="display:none">
+  <div class="login-box">
+    <div class="login-logo">Tumbuh Kembang</div>
+    <p class="login-sub">Monitor bayi standar WHO</p>
+    <div class="sync-badge">☁️ Sync real-time</div>
+
+    <div id="login-step-1">
+      <p style="font-size: 14px; color: var(--text2); margin-bottom: 16px; text-align: left;">
+        Masukkan <strong>kode keluarga</strong> untuk mulai. Gunakan kode yang sama di HP lo dan HP istri supaya data sync otomatis.
+      </p>
+      <div class="form-group" style="text-align: left;">
+        <label class="form-label">Kode keluarga</label>
+        <input type="text" id="family-code-input" placeholder="misal: keluarga-fitrah-2024" style="text-transform: lowercase; letter-spacing: 0.02em;" onkeydown="if(event.key==='Enter')enterFamilyCode()">
+        <p style="font-size: 12px; color: var(--text3); margin-top: 6px;">Bebas pilih apapun. Bisa nama keluarga, nickname, dll.</p>
+      </div>
+      <button class="btn btn-primary" onclick="enterFamilyCode()" style="width: 100%; margin-top: 8px;">Masuk →</button>
+    </div>
+
+    <div id="login-step-2" style="display:none">
+      <p style="font-size: 14px; color: var(--text2); margin-bottom: 8px;">Kode keluarga aktif:</p>
+      <div class="family-code-display" id="code-display"></div>
+      <p style="font-size: 12px; color: var(--text2); margin-bottom: 24px;">Share kode ini ke istri. Masukkan kode yang sama di HP istri untuk sync data.</p>
+      <button class="btn btn-primary" onclick="loginWithCode()" style="width: 100%;">Masuk ke dashboard →</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('login-step-1').style.display='block';document.getElementById('login-step-2').style.display='none'" style="width: 100%; margin-top: 8px;">Ganti kode</button>
+    </div>
+  </div>
+</div>
+
+<div class="app" id="main-app" style="display:none">
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="logo">
@@ -447,7 +542,9 @@
 
     <div class="sidebar-footer">
       <button class="btn btn-outline btn-sm" onclick="printReport()" style="width: 100%; margin-bottom: 8px;">🖨️ Export PDF</button>
-      <p>Data tersimpan di perangkat ini. Untuk backup, gunakan fitur export.</p>
+      <p style="margin-bottom: 6px;">Kode keluarga: <strong id="sidebar-code" style="color: var(--purple)"></strong></p>
+      <p>Share kode ini ke pasangan untuk sync data.</p>
+      <button class="btn btn-outline btn-sm" onclick="logout()" style="width: 100%; margin-top: 8px;">Ganti kode keluarga</button>
     </div>
   </aside>
 
@@ -782,22 +879,137 @@ const IMUNISASI_TEMPLATE = [
   {vaccine:'Polio tetes (OPV-4)',when:'18 bulan',ageMonth:18},
 ];
 
+// ==================== SUPABASE ====================
+const SUPABASE_URL = 'https://lasixcjogcekdfmxgbdn.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_MCQw-OX1AN-tWwSjbDUHyA_dK0X1QLf';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 // ==================== STATE ====================
 let state = { children: [], activeId: null };
+let familyCode = null;
 let growthChartInstance = null;
 let dashChartW = null;
 let dashChartH = null;
 let activeChartTab = 'weight';
+let realtimeChannel = null;
 
-// ==================== STORAGE ====================
-function loadState() {
+// ==================== STORAGE (Supabase) ====================
+async function loadState() {
+  if (!familyCode) return;
+  setLoading(true, 'Memuat data...');
   try {
-    const d = localStorage.getItem('tumbuh-kembang');
-    if (d) state = JSON.parse(d);
-  } catch(e) {}
+    const { data, error } = await sb.from('children').select('*').eq('family_code', familyCode).order('created_at');
+    if (error) throw error;
+    state.children = (data || []).map(row => ({
+      id: row.id,
+      name: row.name,
+      dob: row.dob,
+      gender: row.gender,
+      measurements: row.measurements || [],
+      milestones: row.milestones || {},
+      imunisasi: row.imunisasi && row.imunisasi.length ? row.imunisasi : IMUNISASI_TEMPLATE.map(i => ({...i, done: false}))
+    }));
+    if (!state.activeId && state.children.length) state.activeId = state.children[0].id;
+  } catch(e) {
+    console.error('Load error:', e);
+    showToast('Gagal memuat data. Cek koneksi internet.', 'red');
+  }
+  setLoading(false);
 }
+
+async function saveChild(child) {
+  try {
+    const { error } = await sb.from('children').upsert({
+      id: child.id,
+      family_code: familyCode,
+      name: child.name,
+      dob: child.dob,
+      gender: child.gender,
+      measurements: child.measurements,
+      milestones: child.milestones,
+      imunisasi: child.imunisasi
+    });
+    if (error) throw error;
+  } catch(e) {
+    console.error('Save error:', e);
+    showToast('Gagal menyimpan. Cek koneksi.', 'red');
+  }
+}
+
 function saveState() {
-  localStorage.setItem('tumbuh-kembang', JSON.stringify(state));
+  const c = getChild();
+  if (c) saveChild(c);
+}
+
+function subscribeRealtime() {
+  if (realtimeChannel) sb.removeChannel(realtimeChannel);
+  realtimeChannel = sb.channel('children-' + familyCode)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'children', filter: 'family_code=eq.' + familyCode }, async (payload) => {
+      await loadState();
+      renderSidebar();
+      renderAll();
+      showToast('Data diperbarui dari perangkat lain ✓', 'green');
+    })
+    .subscribe();
+}
+
+// ==================== LOGIN ====================
+function showLoading(show, text) {
+  document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
+  if (text) document.getElementById('loading-text').textContent = text;
+}
+function setLoading(show, text) { showLoading(show, text || 'Memuat...'); }
+
+function enterFamilyCode() {
+  const raw = document.getElementById('family-code-input').value.trim().toLowerCase();
+  if (!raw) { alert('Masukkan kode keluarga'); return; }
+  const code = raw.replace(/\s+/g, '-');
+  document.getElementById('code-display').textContent = code;
+  document.getElementById('login-step-1').style.display = 'none';
+  document.getElementById('login-step-2').style.display = 'block';
+}
+
+async function loginWithCode() {
+  const code = document.getElementById('code-display').textContent.trim();
+  if (!code) return;
+  familyCode = code;
+  localStorage.setItem('tk-family-code', code);
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'flex';
+  document.getElementById('sidebar-code').textContent = code;
+  await loadState();
+  renderSidebar();
+  renderAll();
+  subscribeRealtime();
+}
+
+function logout() {
+  localStorage.removeItem('tk-family-code');
+  if (realtimeChannel) sb.removeChannel(realtimeChannel);
+  familyCode = null;
+  state = { children: [], activeId: null };
+  document.getElementById('main-app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-step-1').style.display = 'block';
+  document.getElementById('login-step-2').style.display = 'none';
+  document.getElementById('family-code-input').value = '';
+}
+
+// ==================== TOAST ====================
+function showToast(msg, type) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:500;z-index:9999;transition:opacity 0.3s;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.background = type === 'green' ? '#E1F5EE' : type === 'red' ? '#FDECEC' : '#F0EDFF';
+  t.style.color = type === 'green' ? '#0A6648' : type === 'red' ? '#8B2020' : '#3D2A99';
+  t.style.opacity = '1';
+  clearTimeout(t._to);
+  t._to = setTimeout(() => { t.style.opacity = '0'; }, 3000);
 }
 
 // ==================== HELPERS ====================
@@ -858,25 +1070,44 @@ function openAddChild() {
 function closeModal() {
   document.getElementById('modal-add-child').classList.remove('open');
 }
-function saveNewChild() {
+async function saveNewChild() {
   const name = document.getElementById('new-name').value.trim();
   const dob = document.getElementById('new-dob').value;
   const gender = document.getElementById('new-gender').value;
   if (!name) { alert('Masukkan nama anak'); return; }
   if (!dob) { alert('Masukkan tanggal lahir'); return; }
+  setLoading(true, 'Menyimpan...');
   const child = {
-    id: Date.now().toString(),
+    id: crypto.randomUUID(),
     name, dob, gender,
     measurements: [],
     milestones: {},
     imunisasi: IMUNISASI_TEMPLATE.map(i => ({...i, done: false}))
   };
-  state.children.push(child);
-  state.activeId = child.id;
-  saveState();
-  closeModal();
-  renderSidebar();
-  renderAll();
+  try {
+    const { error } = await sb.from('children').insert({
+      id: child.id,
+      family_code: familyCode,
+      name: child.name,
+      dob: child.dob,
+      gender: child.gender,
+      measurements: child.measurements,
+      milestones: child.milestones,
+      imunisasi: child.imunisasi
+    });
+    if (error) throw error;
+    state.children.push(child);
+    state.activeId = child.id;
+    setLoading(false);
+    closeModal();
+    renderSidebar();
+    renderAll();
+    showToast('Anak berhasil ditambahkan ✓', 'green');
+  } catch(e) {
+    setLoading(false);
+    console.error(e);
+    alert('Gagal menyimpan: ' + e.message);
+  }
 }
 
 // ==================== SIDEBAR ====================
@@ -890,7 +1121,7 @@ function renderSidebar() {
       <div class="avatar ${c.gender === 'girl' ? 'avatar-girl' : 'avatar-boy'}">${initials(c.name)}</div>
       <div><p class="child-name">${c.name}</p><p class="child-age">${ageLabel(c.dob)}</p></div>
     `;
-    div.onclick = () => { state.activeId = c.id; saveState(); renderSidebar(); renderAll(); };
+    div.onclick = () => { state.activeId = c.id; localStorage.setItem('tk-active-id', c.id); renderSidebar(); renderAll(); };
     list.appendChild(div);
   });
 }
@@ -1051,7 +1282,8 @@ function saveMeasurement() {
   if (!weight && !height && !hc) { alert('Masukkan minimal satu pengukuran'); return; }
   c.measurements.push({ id: Date.now(), date, weight, height, hc, note });
   c.measurements.sort((a,b) => new Date(a.date) - new Date(b.date));
-  saveState();
+  await saveChild(c);
+  showToast('Pengukuran tersimpan ✓', 'green');
   document.getElementById('meas-weight').value = '';
   document.getElementById('meas-height').value = '';
   document.getElementById('meas-hc').value = '';
@@ -1122,14 +1354,15 @@ function renderEntriesList(c) {
   el.innerHTML = rows;
 }
 
-function deleteMeasurement(id) {
+async function deleteMeasurement(id) {
   const c = getChild();
   if (!c || !confirm('Hapus data ini?')) return;
   c.measurements = c.measurements.filter(m => m.id != id);
-  saveState();
+  await saveChild(c);
   renderEntriesList(c);
   renderGrowthChart(c);
   renderDashboard();
+  showToast('Data dihapus', 'green');
 }
 
 function switchChartTab(tab) {
@@ -1236,7 +1469,7 @@ function toggleMilestone(key) {
   const c = getChild();
   if (!c) return;
   c.milestones[key] = !c.milestones[key];
-  saveState();
+  saveChild(c);
   renderMilestonePage();
 }
 
@@ -1283,7 +1516,7 @@ function toggleImun(idx) {
   const c = getChild();
   if (!c) return;
   c.imunisasi[idx].done = !c.imunisasi[idx].done;
-  saveState();
+  saveChild(c);
   renderImunPage();
   renderDashboard();
 }
@@ -1294,12 +1527,28 @@ function printReport() {
 }
 
 // ==================== INIT ====================
-loadState();
-renderSidebar();
-if (state.children.length) {
-  if (!state.activeId) state.activeId = state.children[0].id;
-  renderAll();
-}
+(async () => {
+  const savedCode = localStorage.getItem('tk-family-code');
+  const savedId = localStorage.getItem('tk-active-id');
+  if (savedCode) {
+    familyCode = savedCode;
+    document.getElementById('loading-overlay').style.display = 'flex';
+    document.getElementById('loading-text').textContent = 'Menghubungkan...';
+    document.getElementById('sidebar-code').textContent = savedCode;
+    await loadState();
+    if (savedId) state.activeId = savedId;
+    if (!state.activeId && state.children.length) state.activeId = state.children[0].id;
+    document.getElementById('loading-overlay').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('main-app').style.display = 'flex';
+    renderSidebar();
+    renderAll();
+    subscribeRealtime();
+  } else {
+    document.getElementById('loading-overlay').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+  }
+})();
 </script>
 </body>
 </html>
